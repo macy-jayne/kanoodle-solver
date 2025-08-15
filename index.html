@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kanoodle Solver</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="heading">
+    <h1>Kanoodle Doodles</h1>
+    <div id="colorblind-toggle-container">
+      <label class="switch" for="colorblind-toggle">
+        <input type="checkbox" id="colorblind-toggle" />
+        <span class="slider round"></span>
+      </label>
+      <span class="colorblind-mode">Colorblind Mode</span>
+    </div>
+  </div>
+  <div class="board-and-buttons">
+    <div><button id="instructions-btn">View Instructions</button></div>
+    <div id="board"></div>
+    <div><button id="reset-btn">Clear Board</button></div>
+  </div>
+  <button id="check-btn">Check Solvability</button>
+  <div id="pieces"></div>
+  <p id="result"></p>
+  <div id="popupOverlay" class="overlay">
+    <div class="popup">
+      <div class="popup-content">
+        <span id="closePopupBtn" class="close">&times;</span>
+        <h2>Instructions</h2>
+        <p>Click a piece to rotate it 90 degrees clockwise.</p>
+        <p>Shift + Click a piece to reflect it horizontally.</p>
+        <div style="display:flex; justify-content: center; align-items: center;">
+          <img src="./images/ogPiece.png">
+          <p>&rarr;</p>
+          <img src="./images/horizontalReflection.png">
+        </div>
+        <p>Alt + Click a piece to reflect it vertically.</p>
+        <div style="display:flex; justify-content: center; align-items: center;">
+          <img src="./images/ogPiece.png">
+          <p>&rarr;</p>
+          <img src="./images/verticalReflection.png">
+        </div>
+        <p>Use the Clear Board button to remove all pieces from the board.</p>
+        <p>Use the Check Solvability button to to see if the current pieces you have on the board have any possible solutions.</p>
+      </div>
+    </div>
+  </div>
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    Finding solutions, please wait...
+  </div>
+
+  <script src="scripts/pieces.js"></script>
+  <script src="scripts/transforms.js"></script>
+  <script src="scripts/board.js"></script>
+  <script src="scripts/solver.js"></script>
+  <script src="scripts/main.js"></script>
+</body>
+</html>
