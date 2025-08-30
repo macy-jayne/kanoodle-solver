@@ -7,6 +7,7 @@ window.currentSolutionIndex = null;
 window.userPlacedPieces = null;
 window.userPieceTransforms = null;
 window.isViewingSolution = false;
+window.stopAfterFirstSolution = true;
 
 function disableBoardInteraction() {
     // Disable pointer events on board and pieces container
@@ -23,7 +24,7 @@ function enableBoardInteraction() {
     if (piecesContainer) piecesContainer.style.display = "grid"; // Show pieces container
 }
 
-async function checkSolvability() {
+async function checkSolvability(findAll = false) {
     const overlay = document.getElementById("loading-overlay");
     overlay.style.display = "flex"; // show spinner
 
@@ -40,13 +41,12 @@ async function checkSolvability() {
         }
 
         hideSolutionButtons();
-        const checkBtn = document.getElementById("check-solutions-btn");
+        const checkBtn = document.getElementById("check-btn");
         if (checkBtn) checkBtn.style.display = "none";
 
-        result.textContent = "Checking solutions, please wait...";
+        result.textContent = findAll ? "Finding all solutions..." : "Checking solvability...";
         result.style.color = "black";
 
-        // Let UI update
         await new Promise(r => setTimeout(r, 50));
 
         const board = createBoardState();
@@ -63,6 +63,7 @@ async function checkSolvability() {
 
         const solutions = [];
         const maxSolutions = 1000;
+        window.stopAfterFirstSolution = !findAll;
 
         await backtrackAsync(board, unusedPieces, {}, solutions, maxSolutions);
 
@@ -73,20 +74,26 @@ async function checkSolvability() {
             result.style.color = "red";
             hideSolutionButtons();
         } else {
-            result.textContent = `${window.solutions.length} solution(s) found.`;
-            result.style.color = "green";
+            if (!findAll) {
+                result.textContent = "Solvable!";
+                result.style.color = "green";
+            } else {
+                result.textContent = `${window.solutions.length} solution(s) found.`;
+                result.style.color = "green";
+            }
             showViewSolutionsButton();
         }
 
         if (checkBtn) checkBtn.style.display = "inline-block";
 
     } finally {
-        overlay.style.display = "none"; // always hide spinner
+        overlay.style.display = "none";
     }
 }
 
-// Async backtracking with time-based cooperative yielding to avoid blocking UI
+// Modify backtrackAsync to respect stopAfterFirstSolution
 async function backtrackAsync(board, remainingIds, currentPlacement, solutions, maxSolutions) {
+    if (window.stopAfterFirstSolution && solutions.length >= 1) return;
     if (solutions.length >= maxSolutions) return;
 
     const rows = board.length;
@@ -147,7 +154,7 @@ async function backtrackAsync(board, remainingIds, currentPlacement, solutions, 
                 const prune = hasUnfillableRegion(board, newRemaining);
                 if (!prune) {
                     await backtrackAsync(board, newRemaining, currentPlacement, solutions, maxSolutions);
-                    if (solutions.length >= maxSolutions) {
+                    if ((window.stopAfterFirstSolution && solutions.length >= 1) || solutions.length >= maxSolutions) {
                         placePiece(board, shape, baseRow, baseCol, null);
                         delete currentPlacement[id];
                         return;
@@ -157,7 +164,6 @@ async function backtrackAsync(board, remainingIds, currentPlacement, solutions, 
                 placePiece(board, shape, baseRow, baseCol, null);
                 delete currentPlacement[id];
 
-                // Yield control to UI if enough time elapsed
                 const now = performance.now();
                 if (now - lastYield > yieldIntervalMs) {
                     lastYield = now;
@@ -167,6 +173,25 @@ async function backtrackAsync(board, remainingIds, currentPlacement, solutions, 
         }
     }
 }
+
+// Add Find All Solutions button
+function showFindAllSolutionsButton() {
+    let btn = document.getElementById("find-all-solutions-btn");
+    if (!btn) {
+        btn = document.createElement("button");
+        btn.id = "find-all-solutions-btn";
+        btn.textContent = "Find All Solutions";
+        btn.addEventListener("click", async () => {
+            await checkSolvability(true);
+            toggleSolutionNavigation(window.solutions.length > 1, window.solutions.length);
+            btn.style.display = "none";
+        });
+        const viewBtn = document.getElementById("view-solutions-btn");
+        if (viewBtn) viewBtn.insertAdjacentElement("afterend", btn);
+    }
+    btn.style.display = "inline-block";
+}
+
 
 // Create board array from placedPieces (use userPlacedPieces snapshot if provided)
 function createBoardState() {
@@ -256,23 +281,9 @@ function showViewSolutionsButton() {
     if (!btn) {
         btn = document.createElement("button");
         btn.id = "view-solutions-btn";
-        btn.textContent = "View Solutions";
+        btn.textContent = "View Solution";
         btn.addEventListener("click", () => {
-            window.isViewingSolution = true;
-            window.currentSolutionIndex = 0;
-            displaySolution(window.currentSolutionIndex);
-            toggleSolutionNavigation(true, window.solutions.length);
-            createExitButton();
-            btn.style.display = "none";
-
-            // Hide check solvability button when viewing solutions
-            const checkBtn = document.getElementById("check-btn");
-            if (checkBtn) checkBtn.style.display = "none";
-            const resetBtn = document.getElementById("reset-btn");
-            if (resetBtn) resetBtn.style.visibility = "hidden";
-
-            disableBoardInteraction();
-
+            enterSolutionView(0);
         });
         result.insertAdjacentElement("afterend", btn);
     }
@@ -282,12 +293,55 @@ function showViewSolutionsButton() {
     hideExitButton();
 }
 
+function showFindAllSolutionsButton() {
+    let btn = document.getElementById("find-all-solutions-btn");
+    if (!btn) {
+        btn = document.createElement("button");
+        btn.id = "find-all-solutions-btn";
+        btn.textContent = "Find All Solutions";
+        btn.addEventListener("click", async () => {
+            await checkSolvability(true);
+
+            // Immediately enter first solution view if any solutions exist
+            if (window.solutions.length > 0) {
+                enterSolutionView(0);
+            }
+
+            btn.style.display = "none";
+        });
+        const viewBtn = document.getElementById("view-solutions-btn");
+        if (viewBtn) viewBtn.insertAdjacentElement("afterend", btn);
+    }
+    btn.style.display = "inline-block";
+}
+
+function enterSolutionView(index) {
+    window.isViewingSolution = true;
+    window.currentSolutionIndex = index;
+
+    // Hide main buttons
+    const checkBtn = document.getElementById("check-btn");
+    const resetBtn = document.getElementById("reset-btn");
+    const viewBtn = document.getElementById("view-solutions-btn");
+    const findAllBtn = document.getElementById("find-all-solutions-btn");
+
+    if (checkBtn) checkBtn.style.display = "none";
+    if (resetBtn) resetBtn.style.visibility = "hidden";
+    if (viewBtn) viewBtn.style.display = "none";
+    if (findAllBtn) findAllBtn.style.display = "none";
+
+    disableBoardInteraction();
+    displaySolution(index);
+    toggleSolutionNavigation(window.solutions.length > 1, window.solutions.length);
+    createExitButton();
+}
+
 function createExitButton() {
     let exitBtn = document.getElementById("exit-solution-btn");
     if (!exitBtn) {
         exitBtn = document.createElement("button");
         exitBtn.id = "exit-solution-btn";
-        exitBtn.textContent = "Exit View Solutions";
+        exitBtn.textContent = "Exit View Solution";
         exitBtn.addEventListener("click", () => {
             window.isViewingSolution = false;
             toggleSolutionNavigation(false);
@@ -295,6 +349,7 @@ function createExitButton() {
 
             window.currentSolutionIndex = null;
 
+            // Restore user-placed pieces if any
             if (window.userPlacedPieces && window.userPieceTransforms) {
                 for (const key in placedPieces) delete placedPieces[key];
                 for (const key in pieceTransforms) delete pieceTransforms[key];
@@ -309,27 +364,21 @@ function createExitButton() {
 
             renderPlacedPieces();
 
-            const viewBtn = document.getElementById("view-solutions-btn");
-            if (viewBtn) viewBtn.style.display = "none";
-
-            // Show check solvability button again when exiting view solutions
+            // Show main buttons again
             const checkBtn = document.getElementById("check-btn");
-            if (checkBtn) checkBtn.style.display = "inline-block";
             const resetBtn = document.getElementById("reset-btn");
+            if (checkBtn) checkBtn.style.display = "inline-block";
             if (resetBtn) resetBtn.style.visibility = "visible";
 
             enableBoardInteraction();
-
             result.textContent = "";
             result.style.color = "";
         });
         result.insertAdjacentElement("afterend", exitBtn);
     }
     exitBtn.style.display = "inline-block";
-
-    const viewBtn = document.getElementById("view-solutions-btn");
-    if (viewBtn) viewBtn.style.display = "none";
 }
+
 
 function canPlace(board, shape, baseRow, baseCol) {
     for (const [dx, dy] of shape) {
