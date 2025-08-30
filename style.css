@@ -52,24 +52,16 @@ button:hover {
   
   #pieces {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    grid-auto-rows: 144px;
-    grid-auto-columns: 144px;
+    grid-template-columns: repeat(6, 1.3fr);
     gap: 10px;
     justify-items: center;
-  }
-  
-  .piece {
-    width: 200px;
-    height: 200px;
-    position: relative;
-    background-color: transparent;
     cursor: grab;
   }
   
   button {
     padding: 10px 20px;
     font-size: 16px;
+    margin: 5px;
   }
 
 /* Loading overlay */
@@ -291,4 +283,21 @@ input:checked + .slider:before {
 @media (max-width: 767px) {
   #mobile-warning { display: block; }
   #board, #pieces, #controls { display: none; }
+}
+
+.piece {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start; /* blocks at top */
+  position: relative;
+  background-color: transparent;
+  width: auto; /* will be set by JS */
+}
+
+.piece-controls {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px; /* spacing below blocks */
+  z-index: 30;
 }
