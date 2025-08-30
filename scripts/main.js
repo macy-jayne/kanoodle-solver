@@ -236,4 +236,33 @@ colorblindToggle.addEventListener('change', (e) => {
   }
 });
 
+// After showing solutions, enable Find All Solutions
+function showViewSolutionsButton() {
+  let btn = document.getElementById("view-solutions-btn");
+  if (!btn) {
+      btn = document.createElement("button");
+      btn.id = "view-solutions-btn";
+      btn.textContent = "View Solutions";
+      btn.addEventListener("click", () => {
+          window.isViewingSolution = true;
+          window.currentSolutionIndex = 0;
+          displaySolution(window.currentSolutionIndex);
+          toggleSolutionNavigation(window.solutions.length > 1, window.solutions.length);
+          createExitButton();
+          btn.style.display = "none";
+          const checkBtn = document.getElementById("check-btn");
+          const resetBtn = document.getElementById("reset-btn");
+          if (checkBtn) checkBtn.style.display = "none";
+          if (resetBtn) resetBtn.style.visibility = "hidden";
+
+          disableBoardInteraction();
+          // Show Find All Solutions button
+          showFindAllSolutionsButton();
+      });
+      result.insertAdjacentElement("afterend", btn);
+  }
+  btn.style.display = "inline-block";
+}
+
+
   
